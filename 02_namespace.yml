@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: collectd
+  labels:
+    name: collectd
+    openshift.io/run-level: "0"
+    openshift.io/cluster-monitoring: "false"
+  annotations:
+    openshift.io/node-selector: "" #override default node selector
+    openshift.io/description: "Collectd node agent"
+ 

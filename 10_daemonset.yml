@@ -1,0 +1,101 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: collectd
+  namespace: collectd
+  labels:
+    name: collectd
+spec:
+  selector:
+    matchLabels:
+      name: collectd
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        name: collectd
+        component: collectd
+    spec:
+      serviceAccountName: collectd-sa
+      hostNetwork: true
+
+      containers:
+      - name: collectd
+        image: docker.io/opnfv/barometer-collectd
+        securityContext:
+          privileged: true
+        resources: {}
+
+        terminationMessagePolicy: FallbackToLogsOnError
+        terminationMessagePath: /dev/termination-log
+
+        volumeMounts:
+        - mountPath: /var/cache/pmu
+          name: pmu
+          readOnly: false
+        - mountPath: /var/lib/kolla/config_files
+          name: config-json
+          readOnly: true
+        - mountPath: /var/run
+          name: host-var-run
+          readOnly: false
+        - mountPath: /tmp
+          name: host-tmp
+          readOnly: false
+        - mountPath: /var/lib/collectd
+          name: host-var-lib-collectd
+          readOnly: true
+          # to run commands chroot in to the host
+        - mountPath: /host
+          name: host-slash
+          readOnly: true
+#        - mountPath: /proc
+#          name: proc
+#          readOnly: true
+      volumes:
+        - name: pmu
+          hostPath:
+            path: /var/cache/pmu
+            type: DirectoryOrCreate
+        - name: config
+          configMap:
+            name: collectd-config
+            items:
+            - key: node-collectd.conf
+              path: collectd.conf
+        - name: config-json
+          configMap:
+            name: collectd-json
+            items:
+            - key: collectd.json
+              path: collectd.json
+        - name: host-var-run
+          hostPath:
+            path: /var/run
+        - name: host-tmp
+          hostPath:
+            path: /tmp
+        - name: host-var-lib-collectd
+          hostPath:
+            path: /var/lib/collectd
+        - name: host-slash
+          hostPath:
+            path: /
+#        - name: proc
+#          hostPath:
+#            path: /proc
+
+      terminationGracePeriodSeconds: 10
+
+      restartPolicy: Always
+      # tolerations:
+      # - key: "node-role.kubernetes.io/master"
+      #   operator: Exists
+      #   effect: NoSchedule
+      # - key: "node.kubernetes.io/not-ready"
+      #   operator: Exists
+      #   effect: NoSchedule
+      # - key: node.kubernetes.io/network-unavailable
+      #   operator: Exists
+      #   effect: NoSchedule
