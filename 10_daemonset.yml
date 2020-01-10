@@ -19,10 +19,14 @@ spec:
     spec:
       serviceAccountName: collectd-sa
       hostNetwork: true
+      hostPID: true
 
       containers:
       - name: collectd
-        image: docker.io/opnfv/barometer-collectd
+        image: docker.io/kolla/centos-binary-collectd:stein
+        env:
+          - name: KOLLA_CONFIG_STRATEGY
+            value: "COPY_ALWAYS"
         securityContext:
           privileged: true
         resources: {}
@@ -31,12 +35,21 @@ spec:
         terminationMessagePath: /dev/termination-log
 
         volumeMounts:
-        - mountPath: /var/cache/pmu
-          name: pmu
+        - mountPath: /var/lib/kolla/config_files/src/etc/collectd.d
+          name: puppet-config
           readOnly: false
         - mountPath: /var/lib/kolla/config_files
           name: config-json
           readOnly: true
+        - mountPath: /var/lib/kolla/config_files/src/etc
+          name: config-conf
+          readOnly: true
+        - mountPath: /var/log/collectd
+          name: collectd-log
+          readOnly: false
+        - mountPath: /var/cache/pmu
+          name: pmu
+          readOnly: false
         - mountPath: /var/run
           name: host-var-run
           readOnly: false
@@ -54,11 +67,11 @@ spec:
 #          name: proc
 #          readOnly: true
       volumes:
-        - name: pmu
-          hostPath:
-            path: /var/cache/pmu
-            type: DirectoryOrCreate
-        - name: config
+        - name: collectd-log
+          emptyDir: {}
+        - name: puppet-config
+          emptyDir: {}    
+        - name: config-conf
           configMap:
             name: collectd-config
             items:
@@ -69,7 +82,11 @@ spec:
             name: collectd-json
             items:
             - key: collectd.json
-              path: collectd.json
+              path: config.json
+        - name: pmu
+          hostPath:
+            path: /var/cache/pmu
+            type: DirectoryOrCreate
         - name: host-var-run
           hostPath:
             path: /var/run
